@@ -1,0 +1,32 @@
+# Use the official Windows image as a base
+FROM mcr.microsoft.com/windows/servercore:ltsc2019
+
+# Install Chocolatey (a package manager for Windows)
+RUN powershell -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command \
+    Set-ExecutionPolicy Bypass -Scope Process -Force; \
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; \
+    iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+
+# Install necessary packages
+RUN choco install -y cmake git visualstudio2019buildtools qt vscode
+
+# Set environment variables for Qt
+ENV QT_LOCATION="C:/Qt/6.7.0/mingw_64"
+ENV Qt_DIR="${QT_LOCATION}/cmake/Qt6"
+ENV PATH="${QT_LOCATION}/bin;${PATH}"
+
+# Create and set the working directory
+WORKDIR /app
+
+# Copy the project files to the container
+COPY . /app
+
+# Configure and build the project
+RUN cmake -B build -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH=C:/Qt/6.7.0/mingw_64
+RUN cmake --build build --config Release
+
+# expose port
+EXPOSE 8080
+
+# Set the entrypoint to run the application
+ENTRYPOINT ["build\\Release\\ADVANCEIMAGEPROCESSING.exe"]
